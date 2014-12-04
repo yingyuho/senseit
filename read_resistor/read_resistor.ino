@@ -9,6 +9,11 @@ const int d_map[] = {32, 34, 36, 38, 40, 42, 44, 46, 7, 6, 4};
  * P0 = 32, ..., P7 = 46
  * P8 = 7, P9 = 6, P10 = 4
  */
+ 
+unsigned long prev_time = 0;
+const unsigned long INTV = 1250;
+int a_data[NUM_JOINTS];
+int n_joint = 0;
 
 void setup() {
   // initialize serial:
@@ -17,25 +22,34 @@ void setup() {
 }
 
 void loop() {
-  int data = 0;
+  unsigned long time = 0;
+  int short_data = 0;
   int dh = -1, dl = -1, ai = -1;
-  // if there's any serial available, read it:
-  while (Serial.available() > 0) {
-    data = Serial.parseInt();
-    if (Serial.read() != '\n')
-      continue;
-    if (data >= 0 && data < NUM_JOINTS) {
-      dh = d_map[d_high[data]];
-      dl = d_map[d_low[data]];
-      ai = a_in[data];
-      pinMode(dh, OUTPUT);
-      pinMode(dl, OUTPUT);
-      digitalWrite(dh, HIGH);
-      digitalWrite(dl, LOW);
-      aread = analogRead(ai);
-      Serial.println(aread, DEC);
-      pinMode(dh, INPUT);
-      pinMode(dl, INPUT);
+  time = micros();
+  if (time - prev_time >= INTV) {
+    prev_time = time;
+    
+    dh = d_map[d_high[n_joint]];
+    dl = d_map[d_low[n_joint]];
+    ai = a_in[n_joint];
+    pinMode(dh, OUTPUT);
+    pinMode(dl, OUTPUT);
+    digitalWrite(dh, HIGH);
+    digitalWrite(dl, LOW);
+    a_data[n_joint] = analogRead(ai);
+    pinMode(dh, INPUT);
+    pinMode(dl, INPUT);
+    
+    n_joint = (n_joint + 1) % NUM_JOINTS;
+    if (n_joint == 0) {
+        Serial.print("\xff\xff\xff\xff");
+        Serial.print("res8");
+        for (int i = 0; i < NUM_JOINTS; ++i) {
+          short_data = a_data[i];
+          Serial.write(short_data & 255);
+          short_data >>= 8;
+          Serial.write(short_data & 255);
+        }
     }
   }
 }
