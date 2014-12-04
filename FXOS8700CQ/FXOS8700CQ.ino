@@ -32,16 +32,6 @@
  */
  
 #include "Wire.h"  
-#include <Adafruit_GFX.h>
-#include <Adafruit_PCD8544.h>
-
-// Using NOKIA 5110 monochrome 84 x 48 pixel display
-// pin 9 - Serial clock out (SCLK)
-// pin 8 - Serial data out (DIN)
-// pin 7 - Data/Command select (D/C)
-// pin 5 - LCD chip select (CS)
-// pin 6 - LCD reset (RST)
-Adafruit_PCD8544 display = Adafruit_PCD8544(9, 8, 7, 5, 6);
 
 // Define registers per FXOS8700CQ, Document Number: FXOS8700CQ
 // Data Sheet: Technical Data Rev. 2.0, 02/2013 3-Axis, 12-bit/8-bit Digital Accelerometer
@@ -201,7 +191,7 @@ enum magOSR {
 };
 
 // Specify sensor full scale
-uint8_t accelFSR = AFS_2g;     // Set the scale below either 2, 4 or 8
+uint8_t accelFSR = AFS_8g;     // Set the scale below either 2, 4 or 8
 uint8_t accelODR = AODR_200HZ; // In hybrid mode, accel/mag data sample rates are half of this value
 uint8_t   magOSR = MOSR_5;     // Choose magnetometer oversample rate
 float aRes, mRes;              // Scale resolutions per LSB for the sensor
@@ -221,8 +211,6 @@ boolean sleepMode = false;
 void setup()
 {
   Serial.begin(38400);
-
-//  lcd.begin(16, 2);// Initialize the LCD with 16 characters and 2 lines
  
   // Set up the interrupt pins, they're set as active high, push-pull
   pinMode(int1Pin, INPUT);
@@ -230,36 +218,9 @@ void setup()
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
   
-  display.begin(); // Initialize the display
-  display.setContrast(58); // Set the contrast
-  display.setRotation(2); //  0 or 2) width = width, 1 or 3) width = height, swapped etc.
-  
-// Start device display with ID of sensor
-  display.clearDisplay();
-  display.setCursor(0, 0); display.print("FXOS8700CQ");
-  display.setCursor(0, 8); display.print("3-axis 14-bit");
-  display.setCursor(0, 16); display.print("accelerometer");
-  display.setCursor(0, 24); display.print("3-axis 16-bit");
-  display.setCursor(0, 32); display.print("magnetometer");
-  display.setCursor(0, 40); display.print("0.25 mg, 1 mG ");
-  display.display();
-  delay(2000);
-
-// Set up for data display
-  display.setTextSize(1); // Set text size to normal, 2 is twice normal etc.
-  display.setTextColor(BLACK); // Set pixel color; 1 on the monochrome screen
-  display.clearDisplay();   // clears the screen and buffer
   
   // Read the WHO_AM_I register, this is a good test of communication
   byte c = readByte(FXOS8700CQ_ADDRESS, WHO_AM_I);  // Read WHO_AM_I register
-  display.clearDisplay();
-  display.setCursor(0,0); display.print("FXOS8700CQ");  
-  display.setCursor(0,10); display.print("I Am");
-  display.setCursor(0, 20); display.print("Ox");display.print(c, HEX);  
-  display.setCursor(0, 30); display.print("I Should be"); 
-  display.setCursor(0, 40); display.print("Ox");display.print(0xC7, HEX);  
-  display.display();
-  delay(1000);
 
   if (c == 0xC7) // WHO_AM_I should always be 0xC7
   {  
@@ -270,30 +231,12 @@ void setup()
     accelMotionIntFXOS8700CQ();  // Configure motion interrupts
     sleepModeFXOS8700CQ();       // Configure sleep mode
     Serial.println("FXOS8700CQQ is online...");
-
-    display.clearDisplay();
-    display.setCursor(0,0); display.print("FXOS8700CQ");
-    display.setCursor(0, 20); display.print("ax bias "); display.print((int8_t)2*readByte(FXOS8700CQ_ADDRESS, OFF_X)); display.print(" mg");
-    display.setCursor(0, 30); display.print("ay bias "); display.print((int8_t)2*readByte(FXOS8700CQ_ADDRESS, OFF_Y)); display.print(" mg");
-    display.setCursor(0, 40); display.print("az bias "); display.print((int8_t)2*readByte(FXOS8700CQ_ADDRESS, OFF_Z)); display.print(" mg");
-    display.display();
-    delay(1000);
-    display.clearDisplay();
-    display.setCursor(0,0); display.print("FXOS8700CQ");
-    int16_t mxbias = (int16_t)readByte(FXOS8700CQ_ADDRESS, M_OFF_X_MSB) << 8 | readByte(FXOS8700CQ_ADDRESS, M_OFF_X_LSB);
-    int16_t mybias = (int16_t)readByte(FXOS8700CQ_ADDRESS, M_OFF_Y_MSB) << 8 | readByte(FXOS8700CQ_ADDRESS, M_OFF_Y_LSB);
-    int16_t mzbias = (int16_t)readByte(FXOS8700CQ_ADDRESS, M_OFF_Z_MSB) << 8 | readByte(FXOS8700CQ_ADDRESS, M_OFF_Z_LSB);
-    display.setCursor(0, 20); display.print("mx bias "); display.print((int16_t)(((float)mxbias)*10./32.768)); display.print(" mG");
-    display.setCursor(0, 30); display.print("my bias "); display.print((int16_t)(((float)mybias)*10./32.768)); display.print(" mG");
-    display.setCursor(0, 40); display.print("mz bias "); display.print((int16_t)(((float)mzbias)*10./32.768)); display.print(" mG");
-    display.display();
-    delay(1000);
   }
   else
   {
     Serial.print("Could not connect to FXOS8700CQQ: 0x");
     Serial.println(c, HEX);
-    while(1) ; // Loop forever if communication doesn't happen
+    while(1) ;
   }
 }
 
@@ -333,25 +276,6 @@ void loop()
     Serial.print("x-magnetic field = "); Serial.print(1000.*mx); Serial.print(" mG");   
     Serial.print("y-magnetic field = "); Serial.print(1000.*my); Serial.print(" mG");   
     Serial.print("z-magnetic field = "); Serial.print(1000.*mz); Serial.print(" mG");  
- 
-    display.clearDisplay();
-     
-    display.setCursor(0, 0); display.print("FXOS8700CQ");
-    display.setCursor(0, 8); display.print(" x   y   z  ");
-
-    display.setCursor(0,  16); display.print((int)(1000*ax)); 
-    display.setCursor(24, 16); display.print((int)(1000*ay)); 
-    display.setCursor(48, 16); display.print((int)(1000*az)); 
-    display.setCursor(72, 16); display.print("mg");
-    
-    display.setCursor(0,  24); display.print((int)(1000.*mx)); 
-    display.setCursor(24, 24); display.print((int)(1000.*my)); 
-    display.setCursor(48, 24); display.print((int)(1000.*mz)); 
-    display.setCursor(72, 24); display.print("mG");   
-   
-    display.setCursor(0,  32); display.print("T "); 
-    display.setCursor(40, 32); display.print(temperature, 1); display.print(" C");
-    display.display();
     
     count = millis();
     digitalWrite(ledPin, !digitalRead(ledPin));
@@ -365,18 +289,14 @@ void loop()
   if(source & 0x80) {  // Check if interrupt source is sleep/wake interrupt
    if(!sleepMode) {
     Serial.println("entering sleep mode");
-    display.setCursor(0, 40); display.print("sleep on");
     sleepMode = true;
     }
     else {
     Serial.println("exiting sleep mode");
-    display.setCursor(0, 40); display.print("active");
     sleepMode = false;
     }
     
     readByte(FXOS8700CQ_ADDRESS, SYSMOD); // Clear sleep interrupt
-    display.display();                    // Write message to display
-    delay(1000);                          // Delay a while so we can see the message
   }
 
   // If interrupt is due to motion control trigger...
@@ -386,9 +306,6 @@ void loop()
       tapHandler();
     else if (source & 0x04)  // If motion detection is set go check that
       motionDetect();
- //   else if (source & 0x02)  // If acceleration vector magnitude interrupt
- //     display.setCursor(0,40); display.print("Amagnit!"); 
-//      display.display();     // Write message to display
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////Useful functions
@@ -448,10 +365,9 @@ void tapHandler()
 
     if (source & 0x01)  { // If PoIX is set
       Serial.println(" -");
-      display.setCursor(0,40); display.print("tap on -x"); }
-    else {
+    } else {
       Serial.println(" +");
-        display.setCursor(0,40); display.print("tap on +x"); }
+    }
   }
   if (source & 0x20)  // If AxY bit is set
   {
@@ -461,11 +377,9 @@ void tapHandler()
       Serial.print("Single (1) tap on Y");
 
     if (source & 0x02) { // If PoIY is set
-      Serial.println(" -");
-      display.setCursor(0,40); display.print("tap on -y"); }
+      Serial.println(" -"); }
     else {
-      Serial.println(" +");
-      display.setCursor(0,40); display.print("tap on +y"); }
+      Serial.println(" +"); }
 }
   if (source & 0x40)  // If AxZ bit is set
   {
@@ -474,14 +388,10 @@ void tapHandler()
     else
       Serial.print("Single (1) tap on Z");
     if (source & 0x04) { // If PoIZ is set
-      Serial.println(" -"); 
-      display.setCursor(0,40); display.print("tap on -z"); }
+      Serial.println(" -"); }
     else {
-      Serial.println(" +");
-      display.setCursor(0,40); display.print("tap on +z"); }
+      Serial.println(" +");}
    }
-    display.display(); // Write message to display
-    delay(1000); // Delay a while so we can see the message
 }
 
 // This function will read the p/l source register and
@@ -493,43 +403,25 @@ void portraitLandscapeHandler()
   {
   case 0:
     Serial.print("Portrait Up, ");
-    display.setCursor(70,10); display.print("PU");
-    display.display();
-    delay(1000);
     break;
   case 1:
     Serial.print("Portrait Down, ");
-    display.setCursor(70,10); display.print("PD");
-    display.display();
-    delay(1000);
     break;
   case 2:
     Serial.print("Landscape Right, ");
-    display.setCursor(70,10); display.print("LR");
-    display.display();
-    delay(1000);
     break;
   case 3: 
     Serial.print("Landscape Left, ");
-    display.setCursor(70,10); display.print("LL");
-    display.display();
-    delay(1000);
     break;
   }
   
   if (pl & 0x01) { // Check the BAFRO bit
     Serial.print("Back");
-    display.setCursor(70,10); display.print("BK");
-    display.display();
   } else {
     Serial.print("Front");
-    display.setCursor(70,10); display.print("FT");
-    display.display();
   }
   if (pl & 0x40) { // Check the LO bit
     Serial.println(", Z-tilt!");
-    display.setCursor(70,10); display.print("Z!");
-    display.display();
   }
 }
 
@@ -543,32 +435,24 @@ void motionDetect()
    if (source & 0x02)  // If XHE bit is set, x-motion detected
   {
     if (source & 0x01)  { // If XHP is 1, x event was negative g
-      Serial.println(" -");
-      display.setCursor(0,40); display.print("motion to -x"); }
+      Serial.println(" -"); }
     else {
-      Serial.println(" +");
-      display.setCursor(0,40); display.print("motion to +x"); }
+      Serial.println(" +"); }
   }
   if ((source & 0x08)==0x08)  // If YHE bit is set, y-motion detected
   {
     if (source & 0x04) { // If YHP is set, y event was negative g
-      Serial.println(" -");
-      display.setCursor(0,40); display.print("motion to -y"); }
+      Serial.println(" -"); }
     else {
-      Serial.println(" +");
-      display.setCursor(0,40); display.print("motion to +y"); }
+      Serial.println(" +"); }
   }
   if (source & 0x20)  // If ZHE bit is set, z-motion detected
   {
     if (source & 0x10) { // If ZHP is set
-      Serial.println(" -"); 
-      display.setCursor(0,40); display.print("motion to -z"); }
+      Serial.println(" -"); }
     else {
-      Serial.println(" +");
-      display.setCursor(0,40); display.print("motion to +z"); }
+      Serial.println(" +"); }
   }
-  display.display();  // Display motion message
-  delay(1000); // Wait a while so we can the message
 }
 } 
 

@@ -2,14 +2,14 @@
 import serial
 
 def init(env, port):
-    env['ser'] = serial.Serial(port, baudrate=115200, timeout=0.1)
+    env['ser'] = serial.Serial(port, baudrate=38400, timeout=0.1)
 
 def done(env):
     env['ser'].close()
 
 def main():
     env = {}
-    init(env, '/dev/tty.usbmodem1411')
+    init(env, '/dev/tty.usbmodem1421')
 
     data = None
 
