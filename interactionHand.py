@@ -7,6 +7,7 @@
 # Details are given in the file license.txt included in this distribution.
 
 import sys
+import select
 from mouseInteractor import MouseInteractor
 
 try:
@@ -17,6 +18,7 @@ except:
   print ''' Fehler: PyOpenGL nicht intalliert !!'''
   sys.exit(  )
 
+joint_angles = [70,50] + [0,0,0] + [20,0,0] + [70,90,90] + [70,90,90]
 
 def display(  ):
     """Glut display function."""
@@ -68,17 +70,6 @@ def init(  ):
     tkList = glGenLists( 1 )
     glNewList( tkList, GL_COMPILE )
 
-    global thumb_angle
-    global index_angle
-    global middle_angle
-    global ring_angle
-    global little_angle
-
-    thumb_angle = [70,50]
-    index_angle = [0,0,0]
-    middle_angle = [20,0,0]
-    ring_angle = [70,90,90]
-    little_angle = [70,90,90]
     #glutSolidTeapot( 1.0 )
     drawHandFunc()
     glEndList( )
@@ -105,10 +96,10 @@ def connectJoint(lengthOfBone):
     gluDeleteQuadric(quadric)
     glPopMatrix()
 
-def drawFinger_2(origiral_ang, ang_len_tuples):
+def drawFinger(original_ang, ang_len_tuples):
     glPushMatrix()
 
-    glRotatef(*origiral_ang)
+    glRotatef(*original_ang)
 
     for ang, leng in ang_len_tuples:
         glRotatef(ang, 1, 0, 0)
@@ -118,7 +109,7 @@ def drawFinger_2(origiral_ang, ang_len_tuples):
 
     glPopMatrix()  
 
-def drawFinger(origiral_ang,proximal_len, distal_len, intermediate_len, distal_ang=0, intermediate_ang=0, proximal_ang=0):
+def drawFinger_2(origiral_ang,proximal_len, distal_len, intermediate_len, distal_ang=0, intermediate_ang=0, proximal_ang=0):
     glPushMatrix()
     glRotatef(origiral_ang[0],origiral_ang[1],origiral_ang[2],origiral_ang[3])
     glRotatef(proximal_ang,1,0,0)
@@ -161,13 +152,16 @@ def drawHandFunc():
     
     drawBone(0.5,90,-1,0,0)
     
-    
+    global joint_angles
+
+    thumb_angle = joint_angles[0:2]
+    index_angle = joint_angles[2:5]
+    middle_angle = joint_angles[5:8]
+    ring_angle = joint_angles[8:11]
+    little_angle = joint_angles[11:14]    
     
     #draw thumb
     thumb_position = [90,-1,-1,0]
-    proximal_len=0.2
-    intermediate_len = 0.2
-    distal_len=0.12
     drawThumb(distal_len=0.22,intermediate_len=0.3,intermediate_ang=thumb_angle[0],distal_ang=thumb_angle[1])
     #drawBone(0.52,90,-1,-1,0)
     
@@ -176,57 +170,59 @@ def drawHandFunc():
     glTranslatef(0.0,0.5,0.0)
     createSphere()
 
-    #draw index finger
-    #drawBone(0.6,90,-1,-0.1,0)
+    #---------draw index finger------------
     index_position = [90,-1,-0.1,0]
-    drawFinger(distal_len=0.2,origiral_ang=index_position,proximal_len=0.2,intermediate_len=0.2,proximal_ang=index_angle[0], intermediate_ang=index_angle[1],distal_ang=index_angle[2])
-    
+    index_len_ang = ( (index_angle[0],0.2), (index_angle[1],0.2), (index_angle[2],0.2) )
+    #drawFinger(distal_len=0.2,origiral_ang=index_position,proximal_len=0.2,intermediate_len=0.2,proximal_ang=index_angle[0], intermediate_ang=index_angle[1],distal_ang=index_angle[2])
+    drawFinger(original_ang=index_position, ang_len_tuples=index_len_ang)
 
-
+    #---------connection between index finger and middle finger------------
     drawBone(0.2,90,0,1,0)
     glTranslatef(0.2,0.0,0.0)
     createSphere()
     
-    #draw middle finger
-    #drawBone(0.7,10,1,0,0)
+    #----------draw middle finger-------------
     middle_position = [90,-1,0,0]
-    drawFinger(distal_len=0.2,origiral_ang=middle_position,proximal_len=0.3,intermediate_len=0.2,proximal_ang=middle_angle[0], intermediate_ang=middle_angle[1],distal_ang=middle_angle[2])
-    
+    middle_len_ang = ( (middle_angle[0],0.2), (middle_angle[1],0.3), (middle_angle[2],0.2) )
+    #drawFinger(distal_len=0.2,origiral_ang=middle_position,proximal_len=0.3,intermediate_len=0.2,proximal_ang=middle_angle[0], intermediate_ang=middle_angle[1],distal_ang=middle_angle[2])
+    drawFinger(original_ang=middle_position, ang_len_tuples=middle_len_ang)
 
-
+    #---------connection between middle finger and ring finger------------
     drawBone(0.2,90,0,1,0)
     glTranslatef(0.2,0.0,0.0)
     createSphere()
 
-    #draw ring finger
-    #drawBone(0.62,90,-1,0,0)
+    #----------draw ring finger----------------
     ring_position = [90,-1,0,0]
-    drawFinger(distal_len=0.17,origiral_ang=ring_position,proximal_len=0.25,intermediate_len=0.2,proximal_ang=ring_angle[0], intermediate_ang=ring_angle[1],distal_ang=ring_angle[2])
-    
+    ring_len_ang = ( (ring_angle[0],0.25), (ring_angle[1],0.2), (ring_angle[2],0.17) )
+    #drawFinger(distal_len=0.17,origiral_ang=ring_position,proximal_len=0.25,intermediate_len=0.2,proximal_ang=ring_angle[0], intermediate_ang=ring_angle[1],distal_ang=ring_angle[2])
+    drawFinger(original_ang=ring_position, ang_len_tuples= ring_len_ang)
+
+    #---------connection between little finger and ring finger------------
     drawBone(0.2,90,0,1,0)
     glTranslatef(0.2,0.0,0.0)
     createSphere()
     
-    #draw little finger
+    #-----------draw little finger----------------
     #drawBone(0.45,90,-1,0.1,0)
     little_position = [90,-1,0.1,0]
-    drawFinger(distal_len=0.15,origiral_ang=little_position,proximal_len=0.15,intermediate_len=0.15,proximal_ang=little_angle[0], intermediate_ang=little_angle[1],distal_ang=little_angle[2])
-   
+    little_len_ang = ( (little_angle[0],0.15), (little_angle[1],0.15), (little_angle[2],0.15) )
+    #drawFinger(distal_len=0.15,origiral_ang=little_position,proximal_len=0.15,intermediate_len=0.15,proximal_ang=little_angle[0], intermediate_ang=little_angle[1],distal_ang=little_angle[2])
+    drawFinger(original_ang=little_position, ang_len_tuples=little_len_ang)
 
-    
+    #============complete palm===========
     drawBone(0.5,90,1,0,0)
 
     glTranslatef(0.0,-0.5,0.0)
     createSphere()
 
-    
     drawBone(0.6,270,0,1,0)
 
     glTranslatef(-0.6,0.0,0.0)
     createSphere()
 
-    glPopMatrix()
-    
+
+    glPopMatrix()   
     glFlush()
 
 def reshape(w, h):
@@ -241,6 +237,23 @@ def reshape(w, h):
    glLoadIdentity()
    #glPostRedisplay()
 
+angle_range = [(0,110), (0,90), (0,90), (0,120), (0,45), (0,90), (0,130), (0,45), (0,90), (0,130), (0,45), (0,90), (0,90), (0,45)]
+def inputread():
+    while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        line = raw_input()
+
+        try:
+            args = line.split()
+            n = int(args[0])
+            angle = float(args[1])
+
+            min_range, max_range = angle_range[n]
+            # change_ratio = 
+            if angle >= min_range and angle <= max_range:
+                joint_angles[n] = angle
+                glutPostRedisplay( )
+        except:
+            pass
 
 glutInit( sys.argv )
 glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH )
@@ -251,23 +264,6 @@ glutReshapeFunc(reshape)
 init(  )
 mouseInteractor.registerCallbacks( )
 glutDisplayFunc( display )
-while True:
-    line = raw_input()
+glutIdleFunc( inputread )
 
-    if not line:
-        break
-
-    joint_angle_data = map(float, line.split())
-
-    thumb_angle = [joint_angle_data[0],joint_angle_data[1]]
-    index_angle = [joint_angle_data[2],joint_angle_data[3],joint_angle_data[4]]
-    middle_angle = [joint_angle_data[5],joint_angle_data[6],joint_angle_data[7]]
-    ring_angle = [joint_angle_data[8],joint_angle_data[9],joint_angle_data[10]]
-    little_angle = [joint_angle_data[11],joint_angle_data[12],joint_angle_data[13]]
-
-    glutPostRedisplay( )
-    print thumb_angle
-    print len(joint_angle_data)
 glutMainLoop(  )
-
-
