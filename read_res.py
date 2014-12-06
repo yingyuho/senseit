@@ -23,7 +23,7 @@ def encode_int(s):
 
 def res8(f):
     res = []
-    for i in range(8):
+    for i in range(14):
         res.append(encode_int(f.read(2)))
     for r in res:
         print('{:04d}'.format(r), end=' ')
@@ -44,7 +44,7 @@ def main():
         while True:
             align(ser)
             pkt_id = ser.read(4)
-            if pkt_id == 'res8':
+            if pkt_id == 'r014':
                 res8(ser)
             elif pkt_id == 'time':
                 time(ser)
